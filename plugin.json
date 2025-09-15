@@ -1,0 +1,21 @@
+{
+  "name": "syplugin-codeblock-resizable",
+  "version": "0.1.0",
+  "author": "your-name",
+  "url": "",
+  "minAppVersion": "2.8.9",
+  "backends": ["windows", "linux", "darwin", "docker", "android", "ios"],
+  "frontends": ["desktop", "desktop-window", "mobile", "browser-desktop", "browser-mobile"],
+  "displayName": {
+    "en_US": "Resizable Code Block",
+    "zh_CN": "可拖拽代码块高度"
+  },
+  "description": {
+    "en_US": "Add a draggable handle to resize code blocks; overflow content is scrollable.",
+    "zh_CN": "为代码块添加可拖拽手柄以调整高度，超出内容可滚动查看。"
+  },
+  "readme": {
+    "en_US": "README.md",
+    "zh_CN": "README.md"
+  }
+}
