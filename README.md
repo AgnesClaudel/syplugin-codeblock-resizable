@@ -64,7 +64,7 @@
 
 你可以使用以下方式进行赞助：
 
-<div style="display:flex; flex-direction:column; align-items:center; gap:12px; margin:12px 0;">
-  <img src="./images/alipay.png" alt="" style="width:220px; max-width:90vw; height:auto; display:block;" />
-  <img src="./images/wechat.png" alt="" style="width:220px; max-width:90vw; height:auto; display:block;" />
+<div>
+  <img src="./images/alipay.png" alt="Alipay" width="220" style="display:block; margin:12px auto;">
+  <img src="./images/wechat.png" alt="WeChat" width="220" style="display:block; margin:12px auto;">
 </div>
