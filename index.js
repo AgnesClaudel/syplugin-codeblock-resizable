@@ -3,7 +3,7 @@ const { Plugin } = require("siyuan");
 
 class ResizableCodeBlockPlugin extends Plugin {
     onload() {
-        // 样式：修复底部分隔线、手柄定位与滚动结构
+        // 样式：修复底部分隔线、滚动结构（已移除手柄样式）
         const css = `
 /* 外层容器包裹：负责尺寸、定位与背景，去掉默认底部分隔线 */
 .siyuan-resizable-code {
@@ -32,26 +32,7 @@ class ResizableCodeBlockPlugin extends Plugin {
   background: transparent !important;
 }
 
-/* 拖拽手柄：绝对定位在容器“最新底部”，不再使用 sticky */
-.siyuan-resize-handle {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 12px;
-  cursor: ns-resize;
-  background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.06));
-  z-index: 2;
-  /* 避免和滚动条重叠难点选，允许穿透但自身可点 */
-  pointer-events: auto;
-}
-
-/* 深色主题微调 */
-@media (prefers-color-scheme: dark) {
-  .siyuan-resize-handle {
-    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.10));
-  }
-}
-
-/* 避免手柄遮挡底部文本：给内容底部留出内边距 */
+/* 避免底部拖拽热区遮挡内容：给内容底部留出内边距 */
 .siyuan-resizable-code .hljs,
 .siyuan-resizable-code pre,
 .siyuan-resizable-code code,
@@ -80,8 +61,12 @@ class ResizableCodeBlockPlugin extends Plugin {
 
         const WRAP = "siyuan-resizable-code";
         const SCROLL = "siyuan-resizable-scroll";
-        const HANDLE = "siyuan-resize-handle";
         const DEFAULT_MAX = 600;
+
+        // 拖拽控制参数
+        const MIN_H = 120;
+        const MAX_H = 1200;
+        const HOTZONE = 10; // 底部热区高度（像素），在此范围内按下开始拖拽
 
         const isCodeBlock = (el) => {
             if (!el || el.nodeType !== 1) return false;
@@ -113,7 +98,6 @@ class ResizableCodeBlockPlugin extends Plugin {
             container.classList.add(WRAP);
 
             // 设定初始尺寸策略
-            // 保持 max-height，以便内容初始不超出时可自然撑开至 DEFAULT_MAX 以内
             if (!container.style.height && !container.style.maxHeight) {
                 container.style.maxHeight = DEFAULT_MAX + "px";
             }
@@ -121,33 +105,42 @@ class ResizableCodeBlockPlugin extends Plugin {
             // 内部滚动层
             wrapWithScrollLayer(container);
 
-            // 手柄：绝对定位在容器底部，随着容器高度变化而变化
-            if (!container.querySelector(`:scope > .${HANDLE}`)) {
-                const handle = document.createElement("div");
-                handle.className = HANDLE;
-                container.appendChild(handle);
-                attachDrag(container, handle);
-            }
+            // 绑定直接拖拽容器底部
+            attachDirectBottomDrag(container);
 
             el.dataset.resizableApplied = "1";
         };
 
-        const attachDrag = (container, handle) => {
-            let startY = 0, startH = 0, dragging = false;
+        const attachDirectBottomDrag = (container) => {
+            let dragging = false;
+            let startY = 0;
+            let startH = 0;
+
+            const inHotZone = (clientY) => {
+                const rect = container.getBoundingClientRect();
+                return clientY >= rect.bottom - HOTZONE && clientY <= rect.bottom;
+            };
+
+            const setResizing = (on) => {
+                if (on) {
+                    container.classList.add("resizing");
+                    document.body.style.userSelect = "none";
+                } else {
+                    container.classList.remove("resizing");
+                    document.body.style.userSelect = "";
+                }
+            };
 
             const start = (y) => {
                 dragging = true;
-                // 每次开始拖动都读取“当前真实高度”，避免使用旧高度
                 startY = y;
-                // 使用 offsetHeight 更直观地获得当前容器高度（包含内边距）
                 startH = container.getBoundingClientRect().height;
-                container.classList.add("resizing");
-                document.body.style.userSelect = "none";
+                setResizing(true);
             };
 
             const move = (y) => {
                 if (!dragging) return;
-                const h = Math.max(120, Math.min(1200, Math.round(startH + (y - startY))));
+                const h = Math.max(MIN_H, Math.min(MAX_H, Math.round(startH + (y - startY))));
                 container.style.height = h + "px";
                 container.style.maxHeight = ""; // 固定高度接管
             };
@@ -155,14 +148,29 @@ class ResizableCodeBlockPlugin extends Plugin {
             const end = () => {
                 if (!dragging) return;
                 dragging = false;
-                container.classList.remove("resizing");
-                document.body.style.userSelect = "";
+                setResizing(false);
             };
 
-            handle.addEventListener("mousedown", (e) => {
+            // 鼠标事件
+            container.addEventListener("mousemove", (e) => {
+                // 在未拖拽时，若在热区内，显示 ns-resize 光标；否则保持默认，不影响滚动
+                if (!dragging) {
+                    if (inHotZone(e.clientY)) {
+                        container.style.cursor = "ns-resize";
+                    } else {
+                        container.style.cursor = "";
+                    }
+                }
+            });
+
+            container.addEventListener("mousedown", (e) => {
+                // 仅左键且在热区内才触发
+                if (e.button !== 0) return;
+                if (!inHotZone(e.clientY)) return;
                 e.preventDefault();
                 e.stopPropagation();
                 start(e.clientY);
+
                 const mm = (ev) => move(ev.clientY);
                 const mu = () => {
                     window.removeEventListener("mousemove", mm);
@@ -173,11 +181,15 @@ class ResizableCodeBlockPlugin extends Plugin {
                 window.addEventListener("mouseup", mu);
             });
 
-            handle.addEventListener("touchstart", (e) => {
+            // 触摸事件（移动端）
+            container.addEventListener("touchstart", (e) => {
                 if (e.touches.length > 1) return;
+                const y = e.touches[0].clientY;
+                if (!inHotZone(y)) return;
                 e.preventDefault();
                 e.stopPropagation();
-                start(e.touches[0].clientY);
+                start(y);
+
                 const tm = (ev) => {
                     if (ev.touches.length > 1) return;
                     ev.preventDefault(); // 防止页面滚动干扰拖拽
@@ -236,8 +248,7 @@ class ResizableCodeBlockPlugin extends Plugin {
             this.styleEl.parentNode.removeChild(this.styleEl);
             this.styleEl = null;
         }
-        // 清理已添加的手柄与包装层
-        document.querySelectorAll(".siyuan-resize-handle").forEach((n) => n.remove());
+        // 清理包装层并还原
         document.querySelectorAll(".siyuan-resizable-code").forEach((n) => {
             // 还原内部滚动层结构：把内容移回容器
             const scroll = n.querySelector(":scope > .siyuan-resizable-scroll");
@@ -250,6 +261,7 @@ class ResizableCodeBlockPlugin extends Plugin {
             n.style.removeProperty("max-height");
             n.style.removeProperty("box-shadow");
             n.style.removeProperty("border-bottom");
+            n.style.removeProperty("cursor");
         });
 
         console.log("[resizable] plugin unloaded");

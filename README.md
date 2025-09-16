@@ -1,6 +1,6 @@
 # 可拖拽代码块高度（SiYuan 插件）
 
-为思源笔记的代码块添加“可拖拽手柄”，支持鼠标或触屏上下拖动调整高度，超出内容可滚动查看。适配桌面与移动端，支持多前后端环境。
+为思源笔记的代码块添加“可拖拽高度”功能，支持鼠标或触屏上下拖动调整高度，超出内容可滚动查看。适配桌面与移动端，支持多前后端环境。
 
 - 插件名：syplugin-codeblock-resizable
 - 版本：0.1.0
@@ -10,7 +10,7 @@
 
 ## 功能特性
 
-- 在代码块底部增加一个可拖拽手柄，按住手柄可上下调整代码块高度。
+- 在代码块底部提供一个不可见的拖拽热区（默认 10px 高），将鼠标移至该区域时光标显示为上下拉伸样式，按住即可拖拽调整高度。
 - 初始最大高度为 600px，超过部分支持滚动查看。
 - 支持鼠标拖动与触控拖动（移动端手势）。
 - 自动监听文档变化，新增的代码块会自动增强。
@@ -33,9 +33,10 @@
 
 ## 配置项
 
-目前通过默认样式与逻辑工作，如需自定义：
-- 可修改 index.js 中 DEFAULT_MAX 默认最大高度（单位 px）。
-- 可在样式里调整手柄高度、渐变色或圆角等外观。
+目前通过默认样式与逻辑工作，如需自定义可修改 index.js 中的常量：
+- DEFAULT_MAX：初始最大高度（px）。
+- MIN_H / MAX_H：拖拽可设置的最小/最大高度（px）。
+- HOTZONE：底部拖拽热区高度（px）。
 
 ## 兼容性说明
 
@@ -49,7 +50,7 @@
 ## 卸载/禁用
 
 - 在思源设置 → 插件中禁用或卸载即可。
-- 插件会清理注入的样式、手柄与临时结构，并尽可能还原代码块样式与尺寸属性。
+- 插件会清理注入的样式与临时结构，并尽可能还原代码块样式与尺寸属性（包含恢复 height/max-height/cursor 等）。
 
 ## 问题反馈
 
@@ -63,23 +64,7 @@
 
 你可以使用以下方式进行赞助：
 
-<div class="donate-wrap">
-  <img src="./images/alipay.png" alt="收款码 ¥1（请我吃 2 袋猪宝贝）" class="donate-img" />
-  <img src="./images/wechat.png" alt="收款码 ¥3（请我来瓶冰红茶）" class="donate-img" />
+<div style="display:flex; flex-direction:column; align-items:center; gap:12px; margin:12px 0;">
+  <img src="./images/alipay.png" alt="" style="width:220px; max-width:90vw; height:auto; display:block;" />
+  <img src="./images/wechat.png" alt="" style="width:220px; max-width:90vw; height:auto; display:block;" />
 </div>
-
-<style>
-  .donate-wrap {
-    display: flex;
-    flex-direction: column;   /* 垂直排列成两行 */
-    align-items: center;      /* 居中每一行的图片 */
-    gap: 12px;                /* 行间距，可按需调整 */
-    margin: 12px 0;
-  }
-  .donate-img {
-    width: 220px;             /* 固定展示宽度 */
-    max-width: 90vw;          /* 小屏自适应 */
-    height: auto;
-    display: block;           /* 防止行内元素的缝隙影响布局 */
-  }
-</style>
